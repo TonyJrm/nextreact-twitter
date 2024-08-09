@@ -7,31 +7,53 @@ import { LikeButton } from '../../src/components/tweets/LikeButton';
 import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
+import { z } from 'zod';
 
 const notifyFailed = () => toast.error("Couldn't fetch tweet...");
 
-// 🦁 Créer un schéma zod appelé TweetsScheme qui correspond à la réponse de l'API
-// Tu peux `console.log` la réponse de l'API pour voir la structure attendue
-// Tu pourrais utiliser zod transform pour modifier directement dans le schéma la date
-// 💡 const TweetsScheme = z.object({...
+const TweetsScheme = z.object({
+  tweets: z.array(
+    z.object({
+      id: z.string(),
+      content: z.string(),
+      createdAt: z.string(),
+      user: z.object({
+        id: z.string(),
+        displayName: z.string().nullable(),
+        username: z.string(),
+        avatarUrl: z.string().nullable(),
+      }),
+      likes: z.array(z.number()),
+      _count: z.object({
+        likes: z.number(),
+        replies: z.number(),
+      }),
+      liked: z.boolean(),
+    })
+  ),
+});
 
 export default function FetchAllTweets() {
   const [tweets, setTweets] = useState<TlTweets | null>(null);
 
   useEffect(() => {
-    // 🦁 Créer un abort controller pour annuler la requête si l'utilisateur quitte la page
+    const controller = new AbortController();
 
-    // 🦁 Passer le signal à la requête fetch
-    fetch('/api/tweets') // ℹ️ tu peux remplacer l'url par `/api/tweets?error=erreur` pour voir le problème
+    fetch('/api/tweets', { signal: controller.signal })
       .then((res) => res.json())
+      .then((json) => TweetsScheme.parse(json))
       .then((data) => {
-        // 🦁 Utiliser le schéma TweetsScheme pour valider la réponse de l'API
+        const validData = TweetsScheme.parse(data);
 
-        setTweets(data.tweets);
+        setTweets(validData.tweets);
       })
-      .catch(() => void 0); // 🦁 Ajouter un catch pour gérer les erreurs
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        setTweets([]);
+        notifyFailed();
+      });
 
-    // 🦁 Créer la cleanup fonction qui annule la requête
+    return () => controller.abort();
   }, []);
 
   if (!tweets) return <Loader />;
