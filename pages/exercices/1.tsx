@@ -33,15 +33,18 @@ const TweetsScheme = z.object({
   ),
 });
 
+const getTweets = async (signal: AbortSignal) =>
+  fetch('/api/tweets', { signal })
+    .then((res) => res.json())
+    .then((json) => TweetsScheme.parse(json));
+
 export default function FetchAllTweets() {
   const [tweets, setTweets] = useState<TlTweets | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch('/api/tweets', { signal: controller.signal })
-      .then((res) => res.json())
-      .then((json) => TweetsScheme.parse(json))
+    getTweets(controller.signal)
       .then((data) => {
         const validData = TweetsScheme.parse(data);
 
