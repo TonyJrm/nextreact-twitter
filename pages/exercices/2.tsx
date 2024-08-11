@@ -10,15 +10,23 @@ import TwitterLayout from '../../src/components/TwitterLayout';
 import {
   useInfiniteQuery,
   useMutation,
-  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import { Error } from '~/components/Error';
+import { useEffect, useRef } from 'react';
 
 const notifyFailed = () => toast.error("Couldn't fetch tweet...");
 
 const getTweets = async (signal?: AbortSignal, page = 0) =>
   client(`/api/tweets?page=${page}`, { signal, zodSchema: TweetsScheme });
+
+const useInfiniteTweets = () =>
+  useInfiniteQuery({
+    queryKey: ['tweets'],
+    queryFn: ({ signal, pageParam }) => getTweets(signal, pageParam),
+    onError: () => notifyFailed(),
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
 
 export default function FetchAllTweets() {
   const {
@@ -29,12 +37,7 @@ export default function FetchAllTweets() {
     hasNextPage,
     fetchNextPage,
     refetch,
-  } = useInfiniteQuery({
-    queryKey: ['tweets'],
-    queryFn: ({ signal, pageParam }) => getTweets(signal, pageParam),
-    onError: () => notifyFailed(),
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-  });
+  } = useInfiniteTweets();
 
   if (isLoading) return <Loader />;
 
@@ -52,9 +55,10 @@ export default function FetchAllTweets() {
           <LikeButton count={tweet._count.likes} liked={tweet.liked} />
         </Tweet>
       ))}
-      <button onClick={() => fetchNextPage()} className="block py-4">
-        {isFetchingNextPage ? 'Loading more...' : nextPageStatus}
-      </button>
+      <NextButton
+        isFetchingNextPage={isFetchingNextPage}
+        fetchNextPage={fetchNextPage}
+      />
     </TwitterLayout>
   );
 }
@@ -83,4 +87,58 @@ export const AddTweet = ({ tweetId }: AddTweetProps) => {
   const handleSubmit = (content: string) => mutation.mutate(content);
 
   return <AddTweetForm disabled={mutation.isLoading} onSubmit={handleSubmit} />;
+};
+
+const useOnVisible = (
+  ref: React.RefObject<HTMLElement>,
+  callback: () => void
+) => {
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const current = ref.current;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          callback();
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(current);
+
+    return () => {
+      observer.unobserve(current);
+    };
+  }, [ref, callback]);
+
+  return ref;
+};
+
+type NextButtonProps = {
+  isFetchingNextPage: boolean;
+  hasNextPage?: boolean;
+  fetchNextPage: () => void;
+};
+
+export const NextButton = ({
+  isFetchingNextPage,
+  hasNextPage,
+  fetchNextPage,
+}: NextButtonProps) => {
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useOnVisible(ref, fetchNextPage);
+
+  const nextPageStatus = hasNextPage
+    ? 'Loading...'
+    : 'There is not more tweets';
+
+  return (
+    <button ref={ref} className="block py-4">
+      {isFetchingNextPage ? 'Loading more...' : nextPageStatus}
+    </button>
+  );
 };
