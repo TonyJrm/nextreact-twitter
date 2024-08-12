@@ -34,7 +34,6 @@ export default function FetchAllTweets() {
     isLoading,
     isError,
     isFetchingNextPage,
-    hasNextPage,
     fetchNextPage,
     refetch,
   } = useInfiniteTweets();
@@ -44,7 +43,6 @@ export default function FetchAllTweets() {
   if (isError) return <Error error="Impossible to fetch..." reset={refetch} />;
 
   const tweets = data.pages.flatMap((page) => page.tweets);
-  const nextPageStatus = hasNextPage ? 'Load more tweets...' : 'End of tweets';
 
   return (
     <TwitterLayout>
