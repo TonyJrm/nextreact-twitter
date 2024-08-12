@@ -17,7 +17,7 @@ const queryClient = new QueryClient({
 });
 
 const isDev = process.env.NODE_ENV === 'development';
-const isReactQueryDevToolEnabled: boolean = isDev && false;
+const isReactQueryDevToolEnabled: boolean = isDev && true;
 
 export default function App({ Component, pageProps }: AppProps) {
   return (

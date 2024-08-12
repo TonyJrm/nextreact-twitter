@@ -9,7 +9,6 @@ import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
 import { client } from './1';
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '~/hooks/UserProvider';
 import type { TlTweetsPage } from '~/lib/scheme/tweets';
